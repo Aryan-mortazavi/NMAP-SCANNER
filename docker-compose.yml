@@ -1,0 +1,25 @@
+services:
+  # Web app (dark cyber dashboard) — the main interface
+  web:
+    build: .
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8000"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    volumes:
+      - ./scan_logs.txt:/app/scan_logs.txt
+
+  # Telegram bot — optional, enable with: docker compose --profile bot up -d
+  bot:
+    build: .
+    env_file:
+      - .env
+    command: ["python", "bot.py"]
+    restart: unless-stopped
+    profiles: ["bot"]
+    volumes:
+      - ./scan_logs.txt:/app/scan_logs.txt

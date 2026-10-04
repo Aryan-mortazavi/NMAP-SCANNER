@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NMAP // SCANNER</title>
+<meta name="theme-color" content="#05070a">
+<meta name="format-detection" content="telephone=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Nmap Scanner">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/static/icon-64.png">
+<link rel="apple-touch-icon" href="/static/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05070a;
+  --panel:linear-gradient(180deg,#0b1118 0%,#080d13 100%);
+  --line:rgba(0,229,255,.14);
+  --line-soft:rgba(255,255,255,.06);
+  --accent:#00e5ff;
+  --accent2:#39ff14;
+  --danger:#ff4d6d;
+  --warn:#ffb020;
+  --text:#cfe3ea;
+  --muted:#5d707b;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--mono);
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* ---- background layers ---- */
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,229,255,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,229,255,.045) 1px,transparent 1px);
+  background-size:46px 46px;
+  -webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,#000 20%,transparent 80%);
+          mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,#000 20%,transparent 80%);
+}
+body::before{
+  content:"";position:fixed;z-index:0;pointer-events:none;
+  top:-240px;left:50%;transform:translateX(-50%);
+  width:980px;height:560px;
+  background:radial-gradient(circle,rgba(0,229,255,.13) 0%,rgba(57,255,20,.05) 40%,transparent 68%);
+  filter:blur(8px);
+}
+.wrap{position:relative;z-index:1;max-width:1240px;margin:0 auto}
+
+/* ---- header ---- */
+header{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:22px 26px 18px;
+  border-bottom:1px solid var(--line-soft);
+}
+.brand{font-size:17px;font-weight:700;letter-spacing:.28em;display:flex;align-items:center;gap:12px}
+.brand .mark{
+  color:var(--accent);font-size:20px;
+  text-shadow:0 0 12px rgba(0,229,255,.8);
+}
+.brand .slash{color:var(--accent)}
+.brand .sub{color:var(--muted);font-weight:400;font-size:10px;letter-spacing:.3em;margin-left:6px}
+.sys{
+  display:flex;align-items:center;gap:9px;
+  font-size:11px;letter-spacing:.18em;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;
+  padding:7px 16px;background:rgba(0,229,255,.04);
+}
+.sys .dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);box-shadow:0 0 8px var(--accent2)}
+.sys.run .dot{background:var(--warn);box-shadow:0 0 8px var(--warn);animation:pulse 1s infinite}
+.sys.err .dot{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.sys.run{color:var(--warn);border-color:rgba(255,176,32,.35);background:rgba(255,176,32,.05)}
+.sys.err{color:var(--danger);border-color:rgba(255,77,109,.35);background:rgba(255,77,109,.05)}
+.sys.ready{color:#8fffc9}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ---- main grid ---- */
+main{display:grid;grid-template-columns:400px 1fr;gap:22px;padding:26px}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:14px;
+  position:relative;
+  box-shadow:0 24px 50px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.03);
+}
+.panel::before{
+  content:"";position:absolute;top:-1px;left:22px;width:64px;height:2px;
+  background:linear-gradient(90deg,var(--accent),transparent);
+  box-shadow:0 0 10px rgba(0,229,255,.7);
+}
+.p-title{
+  font-size:10px;letter-spacing:.3em;color:var(--accent);
+  margin-bottom:4px;
+}
+.p-title span{color:var(--muted)}
+
+/* ---- controls ---- */
+.controls{padding:24px;display:flex;flex-direction:column;gap:16px}
+label{font-size:10px;letter-spacing:.24em;color:var(--muted);display:block;margin-bottom:8px}
+input#target{
+  width:100%;
+  background:#04070a;
+  border:1px solid rgba(0,229,255,.28);
+  border-radius:9px;
+  padding:15px 16px;
+  color:#eafcff;
+  font-family:var(--mono);
+  font-size:16px;
+  letter-spacing:.14em;
+  caret-color:var(--accent);
+  outline:none;
+  transition:box-shadow .18s,border-color .18s;
+}
+input#target::placeholder{color:#33424c;letter-spacing:.1em}
+input#target:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(0,229,255,.13),0 0 22px rgba(0,229,255,.14);
+}
+.profiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.profile{
+  background:#070c11;
+  border:1px solid var(--line-soft);
+  border-radius:10px;
+  padding:13px 13px 12px;
+  text-align:left;
+  cursor:pointer;
+  font-family:var(--mono);
+  transition:border-color .18s,background .18s,transform .18s,box-shadow .18s;
+}
+.profile:hover{transform:translateY(-2px);border-color:rgba(0,229,255,.4)}
+.profile .p-name{
+  display:flex;align-items:center;gap:7px;
+  font-size:12px;font-weight:700;letter-spacing:.2em;color:var(--muted);
+  margin-bottom:6px;
+}
+.profile .p-name::before{
+  content:"";width:7px;height:7px;border-radius:2px;
+  background:#26333c;transition:.18s;
+}
+.profile .p-desc{font-size:10px;line-height:1.55;color:#4a5b65;word-break:break-all}
+.profile.active{
+  border-color:rgba(0,229,255,.6);
+  background:linear-gradient(180deg,rgba(0,229,255,.09),rgba(0,229,255,.02));
+  box-shadow:inset 0 0 24px rgba(0,229,255,.06),0 0 18px rgba(0,229,255,.10);
+}
+.profile.active .p-name{color:var(--accent)}
+.profile.active .p-name::before{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.profile.active .p-desc{color:#7ea2af}
+.scan-btn{
+  position:relative;overflow:hidden;
+  width:100%;
+  background:linear-gradient(90deg,rgba(0,229,255,.16),rgba(57,255,20,.10));
+  border:1px solid rgba(0,229,255,.55);
+  border-radius:10px;
+  color:#eaffff;
+  padding:16px;
+  font-family:var(--mono);
+  font-size:13px;font-weight:700;letter-spacing:.24em;
+  cursor:pointer;
+  transition:box-shadow .2s,opacity .2s,transform .1s;
+}
+.scan-btn:hover:not(:disabled){
+  box-shadow:0 0 28px rgba(0,229,255,.35),inset 0 0 22px rgba(0,229,255,.12);
+}
+.scan-btn:active:not(:disabled){transform:scale(.985)}
+.scan-btn::after{
+  content:"";position:absolute;top:0;left:-80%;width:60%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.14),transparent);
+  transform:skewX(-20deg);transition:left .45s;
+}
+.scan-btn:hover:not(:disabled)::after{left:130%}
+.scan-btn:disabled{opacity:.42;cursor:not-allowed}
+.cooldown-msg{font-size:11px;color:var(--warn);min-height:14px;letter-spacing:.06em}
+.notice{
+  font-size:10.5px;line-height:1.65;color:#e8b45c;
+  border-left:2px solid var(--warn);
+  background:rgba(255,176,32,.055);
+  padding:9px 12px;border-radius:0 7px 7px 0;
+  letter-spacing:.03em;
+}
+.notice b{color:var(--warn);letter-spacing:.1em}
+
+/* ---- terminal ---- */
+.terminal{display:flex;flex-direction:column;min-height:540px;overflow:hidden}
+.term-head{
+  display:flex;align-items:center;gap:14px;
+  padding:12px 16px;
+  border-bottom:1px solid var(--line-soft);
+  background:rgba(255,255,255,.022);
+}
+.dots{display:flex;gap:7px}
+.dots i{width:11px;height:11px;border-radius:50%;opacity:.85}
+.dots i:nth-child(1){background:#ff5f57}
+.dots i:nth-child(2){background:#febc2e}
+.dots i:nth-child(3){background:#28c840}
+.term-title{flex:1;text-align:center;font-size:11px;color:var(--muted);letter-spacing:.18em}
+.term-actions{display:flex;gap:8px}
+.term-actions button{
+  background:transparent;border:1px solid var(--line-soft);color:var(--muted);
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;
+  padding:6px 12px;border-radius:6px;cursor:pointer;transition:.18s;
+}
+.term-actions button:hover:not(:disabled){color:var(--accent);border-color:rgba(0,229,255,.5);background:rgba(0,229,255,.06)}
+.term-actions button:disabled{opacity:.4;cursor:not-allowed}
+#output{
+  flex:1;margin:0;padding:20px 22px;
+  font-family:var(--mono);font-size:13px;line-height:1.6;
+  white-space:pre-wrap;word-break:break-word;
+  color:#c4ead9;
+  overflow-y:auto;
+  background:
+    repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 2px,transparent 2px 4px),
+    #04070a;
+  scrollbar-width:thin;scrollbar-color:#17323b transparent;
+}
+#output::-webkit-scrollbar{width:9px}
+#output::-webkit-scrollbar-thumb{background:#17323b;border-radius:5px}
+#output.ph{color:#43545e}
+#output.err{color:#ff8ba1}
+#output .cursor{color:var(--accent);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.term-foot{
+  display:flex;justify-content:space-between;align-items:center;
+  border-top:1px solid var(--line-soft);
+  padding:11px 17px;font-size:10.5px;letter-spacing:.18em;color:var(--muted);
+}
+#stateLabel.scanning,#stateLabel.queued{color:var(--warn)}
+#stateLabel.done{color:var(--accent2)}
+#stateLabel.error{color:var(--danger)}
+
+/* ---- info cards ---- */
+.info{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;padding:0 26px 30px}
+@media(max-width:900px){.info{grid-template-columns:1fr}}
+.card{padding:20px}
+.card h3{
+  margin:0 0 14px;font-size:10px;letter-spacing:.28em;color:var(--accent);font-weight:700;
+}
+.card .row{
+  font-size:11px;line-height:1.9;color:var(--muted);
+  display:flex;justify-content:space-between;gap:10px;
+  border-bottom:1px dashed rgba(255,255,255,.05);
+  padding:3px 0;
+}
+.card .row:last-child{border-bottom:none}
+.card .row b{color:#a8c6d1;font-weight:500;text-align:right;word-break:break-word}
+.card .row b.g{color:#8fffc9}
+.card .row b.y{color:var(--warn)}
+
+footer{
+  border-top:1px solid var(--line-soft);
+  padding:18px 26px 26px;
+  display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  font-size:10px;letter-spacing:.16em;color:#3d4c55;
+}
+footer .g{color:#3d6b52}
+
+/* ================= MOBILE POLISH ================= */
+html{-webkit-text-size-adjust:100%}
+body{-webkit-tap-highlight-color:transparent}
+button,input{touch-action:manipulation}
+button{user-select:none;-webkit-user-select:none}
+.scan-btn{min-height:50px}
+.profile{min-height:78px}
+#output{-webkit-user-select:text;user-select:text} /* allow selecting scan output */
+
+@media (max-width:900px){
+  header{padding:18px 16px 14px;flex-wrap:wrap;gap:10px}
+  main{grid-template-columns:1fr;padding:16px;gap:16px}
+  .info{padding:0 16px 26px;gap:16px}
+  footer{padding:16px 16px 28px}
+  .terminal{min-height:460px}
+}
+
+@media (max-width:600px){
+  .brand{font-size:14px;letter-spacing:.2em;gap:8px}
+  .brand .mark{font-size:17px}
+  .brand .sub{display:none}
+  .sys{font-size:9.5px;padding:6px 12px;letter-spacing:.12em;gap:7px}
+  .controls{padding:18px;gap:14px}
+  input#target{padding:14px}
+  .profiles{gap:9px}
+  .profile{padding:13px 12px}
+  .profile .p-desc{font-size:9.5px}
+  .scan-btn{padding:16px;letter-spacing:.18em}
+  .notice{font-size:10px}
+  .term-head{padding:10px 12px;gap:10px}
+  .term-actions button{padding:9px 13px;min-height:38px}
+  .term-title{letter-spacing:.1em}
+  #output{padding:16px 14px;font-size:12.5px;line-height:1.55}
+  .term-foot{padding:10px 14px;font-size:10px}
+  .card{padding:17px 16px}
+  .panel::before{left:16px}
+}
+
+@media (max-width:420px){
+  header{padding:14px 12px 12px}
+  main{padding:12px;gap:14px}
+  .controls{padding:16px;gap:13px}
+  .profiles{grid-template-columns:1fr} /* stack profile cards on tiny screens */
+  .info{padding:0 12px 22px;gap:14px}
+  .brand{font-size:13px;letter-spacing:.14em}
+  .sys{width:100%;justify-content:center;border-radius:10px}
+  #output{padding:14px 12px;font-size:12px}
+  footer{flex-direction:column;gap:8px;text-align:center;font-size:9.5px}
+}
+
+/* ================= ACCESS LOCK ================= */
+[hidden]{display:none !important}
+.lock-overlay{
+  position:fixed;inset:0;z-index:200;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  background:rgba(3,5,8,.94);
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+}
+.lock-card{
+  width:100%;max-width:360px;padding:28px 22px 26px;
+  display:flex;flex-direction:column;gap:14px;text-align:center;
+}
+.lock-card .lock-mark{
+  font-size:36px;line-height:1;color:var(--accent);
+  text-shadow:0 0 20px rgba(0,229,255,.85);
+}
+.lock-card p{margin:0;font-size:11.5px;line-height:1.7;color:var(--muted);letter-spacing:.04em}
+.lock-input{
+  width:100%;
+  background:#04070a;
+  border:1px solid rgba(0,229,255,.28);
+  border-radius:9px;
+  padding:15px 16px;
+  color:#eafcff;
+  font-family:var(--mono);
+  font-size:16px;letter-spacing:.3em;text-align:center;
+  caret-color:var(--accent);
+  outline:none;
+}
+.lock-input::placeholder{letter-spacing:.3em;color:#33424c}
+.lock-input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(0,229,255,.13),0 0 22px rgba(0,229,255,.14);
+}
+#totpRow{width:100%}
+.captcha-row{display:flex;gap:10px;align-items:center;justify-content:center}
+.captcha-img{
+  height:56px;border:1px solid var(--line);border-radius:8px;
+  background:#04070a;display:block;
+}
+.captcha-refresh{
+  width:44px;height:44px;
+  background:transparent;border:1px solid var(--line-soft);border-radius:8px;
+  color:var(--muted);font-size:18px;cursor:pointer;transition:.18s;
+}
+.captcha-refresh:hover{color:var(--accent);border-color:rgba(0,229,255,.5);background:rgba(0,229,255,.06)}
+.lock-err{min-height:15px;font-size:11px;color:var(--danger);letter-spacing:.06em}
+.lock-err.shake{animation:shake .35s}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%,60%{transform:translateX(-7px)}
+  40%,80%{transform:translateX(7px)}
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span class="mark">⌁</span>NMAP<span class="slash">//</span>SCANNER
+      <span class="sub">v1.0</span>
+    </div>
+    <div class="sys ready" id="sysStatus"><span class="dot"></span><span id="sysText">SYSTEM READY</span></div>
+  </header>
+
+  <main>
+    <!-- ============ CONTROLS ============ -->
+    <section class="panel controls">
+      <div>
+        <div class="p-title">01 <span>// TARGET</span></div>
+        <label for="target">IP ADDRESS</label>
+        <input id="target" type="text" placeholder="192.168.1.1" spellcheck="false" autocomplete="off" maxlength="64">
+      </div>
+
+      <div>
+        <div class="p-title">02 <span>// PROFILE</span></div>
+        <label>SCAN MODE</label>
+        <div class="profiles">
+          <button class="profile active" data-profile="fast" type="button">
+            <span class="p-name">FAST</span>
+            <span class="p-desc">nmap -F -T4<br>quick port sweep</span>
+          </button>
+          <button class="profile" data-profile="full" type="button">
+            <span class="p-name">FULL</span>
+            <span class="p-desc">nmap -sV -T4 --top-ports 1000<br>service / version detection</span>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div class="p-title">03 <span>// EXECUTE</span></div>
+        <button id="scanBtn" class="scan-btn" type="button">▶&nbsp; INITIATE SCAN</button>
+        <div class="cooldown-msg" id="cooldownMsg"></div>
+      </div>
+
+      <div class="notice">
+        <b>⚠ AUTHORIZED TARGETS ONLY</b><br>
+        Scan only systems you own or have explicit permission to test.
+        Unauthorized scanning is illegal in most jurisdictions.
+      </div>
+    </section>
+
+    <!-- ============ TERMINAL ============ -->
+    <section class="panel terminal">
+      <div class="term-head">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="term-title">scan_output.txt</div>
+        <div class="term-actions">
+          <button id="copyBtn" type="button" disabled>COPY</button>
+          <button id="dlBtn" type="button" disabled>SAVE</button>
+        </div>
+      </div>
+      <pre id="output" class="ph">┌────────────────────────────────────────────────────┐
+│  NMAP SCANNER // awaiting input                   │
+│                                                    │
+│  Enter a target IP, pick a profile and hit         │
+│  INITIATE SCAN. Results appear here.               │
+└────────────────────────────────────────────────────┘</pre>
+      <div class="term-foot">
+        <span id="stateLabel">IDLE</span>
+        <span id="timer">0.0s</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ INFO ============ -->
+  <section class="info">
+    <div class="panel card">
+      <h3>PROFILES</h3>
+      <div class="row"><span>fast</span><b>-F -T4</b></div>
+      <div class="row"><span>full</span><b>-sV --top-ports 1000</b></div>
+      <div class="row"><span>custom args</span><b class="y">disabled</b></div>
+      <div class="row"><span>input</span><b>single IP only</b></div>
+    </div>
+    <div class="panel card">
+      <h3>LIMITS</h3>
+      <div class="row"><span>cooldown</span><b class="g" id="cdInfo">30s</b></div>
+      <div class="row"><span>parallel scans</span><b>2 global</b></div>
+      <div class="row"><span>timeout</span><b class="y">300s</b></div>
+      <div class="row"><span>rate limit</span><b>1 / client</b></div>
+    </div>
+    <div class="panel card">
+      <h3>ENGINE</h3>
+      <div class="row"><span>backend</span><b>FastAPI + asyncio</b></div>
+      <div class="row"><span>scanner</span><b>nmap (subprocess)</b></div>
+      <div class="row"><span>shell = true</span><b class="g">never</b></div>
+      <div class="row"><span>logging</span><b class="g">enabled</b></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>NMAP//SCANNER — FASTAPI + ASYNCIO</span>
+    <span class="g">● ALL SCANS ARE LOGGED</span>
+  </footer>
+</div>
+
+<!-- ============ ACCESS LOCK ============ -->
+<div class="lock-overlay" id="lockOverlay" hidden>
+  <div class="panel lock-card">
+    <div class="lock-mark">⌁</div>
+    <div class="p-title">ACCESS <span>// RESTRICTED</span></div>
+    <p>This scanner is protected by an access code.<br>Enter it to continue.</p>
+    <input id="accessCode" class="lock-input" type="password" placeholder="ACCESS CODE" maxlength="128"
+           autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"
+           aria-label="Access code">
+    <div id="totpRow" hidden>
+      <input id="totpCode" class="lock-input" type="text" inputmode="numeric" placeholder="6-DIGIT CODE"
+             maxlength="6" autocomplete="one-time-code" autocapitalize="off" autocorrect="off"
+             spellcheck="false" aria-label="Authenticator code">
+    </div>
+    <div id="captchaRow">
+      <div class="captcha-row">
+        <img id="captchaImg" class="captcha-img" alt="captcha challenge">
+        <button id="captchaRefresh" class="captcha-refresh" type="button" title="New code" aria-label="New captcha">⟳</button>
+      </div>
+      <input id="captchaInput" class="lock-input" type="text" placeholder="TYPE THE CODE ABOVE" maxlength="5"
+             autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
+             aria-label="Captcha code">
+    </div>
+    <div class="lock-err" id="lockErr"></div>
+    <button id="unlockBtn" class="scan-btn" type="button">⌁&nbsp; UNLOCK</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+
+const input = $("#target"), scanBtn = $("#scanBtn"), out = $("#output");
+const stateLabel = $("#stateLabel"), timerEl = $("#timer");
+const sysStatus = $("#sysStatus"), sysText = $("#sysText");
+const cdMsg = $("#cooldownMsg"), copyBtn = $("#copyBtn"), dlBtn = $("#dlBtn");
+const lockOverlay = $("#lockOverlay"), accessCode = $("#accessCode");
+const lockErr = $("#lockErr"), unlockBtn = $("#unlockBtn");
+const totpCode = $("#totpCode"), totpRow = $("#totpRow");
+const captchaImg = $("#captchaImg"), captchaInput = $("#captchaInput");
+const captchaRefresh = $("#captchaRefresh");
+
+const PLACEHOLDER = out.textContent;
+let profile = "fast";
+let busy = false, resolved = true;
+let pollT = null, tickT = null, cdT = null;
+let startedAt = 0, lastResult = "", cdLeft = 0, fails = 0;
+
+/* ---------- helpers ---------- */
+function setOutput(text, cls){
+  out.textContent = text;
+  out.className = cls || "";
+  out.scrollTop = out.scrollHeight;
+}
+function setSys(text, cls){
+  sysText.textContent = text;
+  sysStatus.className = "sys " + cls;
+}
+function setState(text, cls){
+  stateLabel.textContent = text;
+  stateLabel.className = cls || "";
+}
+function lockUI(locked){
+  scanBtn.disabled = locked;
+  document.querySelectorAll(".profile").forEach(b => b.disabled = locked);
+}
+function setDefaultBtn(){
+  scanBtn.innerHTML = "▶&nbsp; INITIATE SCAN";
+}
+async function api(path, opts){
+  const r = await fetch(path, opts);
+  const data = await r.json().catch(() => ({}));
+  if(!r.ok){
+    if(r.status === 401) showLock();
+    const err = new Error(data.error || data.detail || ("Request failed (" + r.status + ")"));
+    err.status = r.status;
+    err.cooldown = data.cooldown;
+    err.captcha = !!data.captcha;
+    throw err;
+  }
+  return data;
+}
+function fmt(s){ return s.toFixed(1) + "s"; }
+
+/* ---------- timers ---------- */
+function startTick(){
+  startedAt = Date.now();
+  clearInterval(tickT);
+  timerEl.textContent = "0.0s";
+  tickT = setInterval(() => {
+    timerEl.textContent = fmt((Date.now() - startedAt) / 1000);
+  }, 100);
+}
+function stopTick(){ clearInterval(tickT); tickT = null; }
+
+function startCooldown(sec){
+  clearInterval(cdT);
+  cdLeft = sec;
+  lockUI(true);
+  const step = () => {
+    if(cdLeft <= 0){
+      clearInterval(cdT); cdT = null;
+      cdMsg.textContent = "";
+      if(!busy) setDefaultBtn();
+      if(!busy) lockUI(false);
+      return;
+    }
+    cdMsg.textContent = "COOLDOWN · wait " + cdLeft + "s";
+    scanBtn.textContent = "⌁ COOLDOWN " + cdLeft + "S";
+    cdLeft--;
+  };
+  step();
+  cdT = setInterval(step, 1000);
+}
+
+function beginScanningUI(state){
+  busy = true; resolved = false;
+  lockUI(true);
+  scanBtn.textContent = "◉ SCANNING...";
+  setState(state.toUpperCase(), state);
+  setSys(state === "queued" ? "QUEUED" : "SCANNING", "run");
+  startTick();
+  startPolling();
+  // On phones, jump to the terminal so the user sees progress
+  if(window.matchMedia("(max-width: 900px)").matches){
+    document.querySelector(".terminal").scrollIntoView({behavior: "smooth", block: "start"});
+  }
+}
+
+/* ---------- polling ---------- */
+function startPolling(){
+  clearInterval(pollT);
+  pollT = setInterval(async () => {
+    try{
+      const s = await api("/api/status");
+      fails = 0;
+      applyStatus(s);
+    }catch(e){
+      if(e.status === 401){ clearInterval(pollT); pollT = null; return; } // lock shown by api()
+      fails++;
+      if(fails >= 10){
+        clearInterval(pollT); pollT = null;
+        setOutput("ERROR\n\nLost connection to the server.", "err");
+        setState("ERROR", "error"); setSys("CONNECTION LOST", "err");
+        busy = false; lockUI(false); stopTick(); setDefaultBtn();
+      }
+    }
+  }, 1000);
+}
+
+function applyStatus(s){
+  if(s.state === "queued" || s.state === "scanning"){
+    if(!busy) beginScanningUI(s.state);
+    else setState(s.state.toUpperCase(), s.state);
+    return;
+  }
+  if(resolved) return;
+
+  if(s.state === "done"){
+    resolved = true;
+    clearInterval(pollT); pollT = null;
+    stopTick(); busy = false;
+    setDefaultBtn(); lockUI(false);
+    if(s.result != null){
+      lastResult = s.result;
+      setOutput(s.result, "");
+      copyBtn.disabled = false; dlBtn.disabled = false;
+    }
+    setState("SCAN COMPLETE", "done");
+    setSys("SYSTEM READY", "ready");
+    if(s.cooldown > 0) startCooldown(Math.ceil(s.cooldown));
+  }else if(s.state === "error"){
+    resolved = true;
+    clearInterval(pollT); pollT = null;
+    stopTick(); busy = false;
+    setDefaultBtn(); lockUI(false);
+    setOutput("SCAN FAILED\n\n" + (s.error || "Unknown error."), "err");
+    setState("ERROR", "error");
+    setSys("SCAN FAILED", "err");
+    if(s.cooldown > 0) startCooldown(Math.ceil(s.cooldown));
+  }
+}
+
+/* ---------- actions ---------- */
+async function startScan(){
+  const target = input.value.trim();
+  if(!target){
+    setOutput("ERROR\n\nEnter an IP address to scan.", "err");
+    setState("ERROR", "error");
+    input.focus();
+    return;
+  }
+  clearInterval(cdT); cdT = null; cdMsg.textContent = "";
+  lockUI(true);
+  scanBtn.textContent = "◉ STARTING...";
+  setState("CONNECTING", "queued");
+  setSys("CONNECTING", "run");
+  copyBtn.disabled = true; dlBtn.disabled = true;
+
+  try{
+    await api("/api/scan", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({target, profile})
+    });
+    beginScanningUI("queued");
+  }catch(e){
+    setDefaultBtn(); lockUI(false);
+    setOutput("ERROR\n\n" + e.message, "err");
+    setState("ERROR", "error");
+    setSys("ERROR", "err");
+    // Sync cooldown if the server imposed one
+    if(e.cooldown > 0 || e.status === 429){
+      api("/api/status").then(s => {
+        if(s.cooldown > 0 && !busy) startCooldown(Math.ceil(s.cooldown));
+      }).catch(() => {});
+    }
+    if(e.status === 429 && /already running/i.test(e.message)){
+      beginScanningUI("scanning");
+    }
+  }
+}
+
+copyBtn.addEventListener("click", async () => {
+  if(!lastResult) return;
+  try{
+    await navigator.clipboard.writeText(lastResult);
+    const t = copyBtn.textContent;
+    copyBtn.textContent = "COPIED";
+    setTimeout(() => copyBtn.textContent = t, 1400);
+  }catch(_){}
+});
+dlBtn.addEventListener("click", () => {
+  if(!lastResult) return;
+  const blob = new Blob([lastResult], {type: "text/plain;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "scan-" + (input.value.trim() || "result") + "-" + profile + ".txt";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+/* ---------- events ---------- */
+document.querySelectorAll(".profile").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".profile").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    profile = btn.dataset.profile;
+  });
+});
+scanBtn.addEventListener("click", startScan);
+input.addEventListener("keydown", e => { if(e.key === "Enter") startScan(); });
+
+/* ---------- access lock (step 1: access code, step 2: TOTP) ---------- */
+let totpEnabled = false;
+
+function showLock(){
+  totpRow.hidden = !totpEnabled;
+  lockOverlay.hidden = false;
+  setTimeout(() => accessCode.focus(), 60); // step 1 always starts with the access code
+}
+function hideLock(){ lockOverlay.hidden = true; }
+
+function shake(){
+  lockErr.classList.remove("shake");
+  void lockErr.offsetWidth; // restart the animation
+  lockErr.classList.add("shake");
+}
+
+async function loadAuthInfo(){
+  try{
+    const a = await fetch("/api/auth").then(r => r.json());
+    totpEnabled = !!a.totp;
+  }catch(_){ totpEnabled = false; }
+}
+
+let captchaId = "";
+async function loadCaptcha(){
+  try{
+    const d = await fetch("/api/captcha").then(r => r.json());
+    captchaId = d.id;
+    captchaImg.src = "data:image/png;base64," + d.image;
+    captchaInput.value = "";
+  }catch(_){ /* retry on next unlock */ }
+}
+captchaRefresh.addEventListener("click", loadCaptcha);
+
+async function unlock(){
+  const code = accessCode.value;
+  const totp = totpCode.value.trim();
+  const cap = captchaInput.value.trim();
+  lockErr.textContent = "";
+
+  if(!cap){
+    lockErr.textContent = "Type the code shown in the image.";
+    shake();
+    captchaInput.focus();
+    return;
+  }
+  if(!code){
+    lockErr.textContent = "Enter the access code.";
+    shake();
+    accessCode.focus();
+    return;
+  }
+  if(totpEnabled && !/^\d{6}$/.test(totp)){
+    lockErr.textContent = "Enter the 6-digit code from your authenticator app.";
+    shake();
+    totpCode.focus();
+    return;
+  }
+
+  unlockBtn.disabled = true;
+  unlockBtn.textContent = "◉ VERIFYING...";
+  try{
+    await api("/api/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({code, totp, captcha_id: captchaId, captcha: cap})
+    });
+    accessCode.value = "";
+    totpCode.value = "";
+    hideLock();
+    init();
+  }catch(e){
+    lockErr.textContent = "✗ " + (e.message || "Access denied.");
+    shake();
+    if(e.captcha) setTimeout(() => captchaInput.focus(), 60);
+    else if(/authenticator/i.test(e.message)) setTimeout(() => totpCode.focus(), 60);
+    else setTimeout(() => accessCode.focus(), 60);
+  }finally{
+    unlockBtn.disabled = false;
+    unlockBtn.innerHTML = "⌁&nbsp; UNLOCK";
+    loadCaptcha(); // every attempt consumes its challenge
+  }
+}
+
+unlockBtn.addEventListener("click", unlock);
+accessCode.addEventListener("keydown", e => { if(e.key === "Enter") unlock(); });
+totpCode.addEventListener("keydown", e => { if(e.key === "Enter") unlock(); });
+totpCode.addEventListener("input", () => {
+  totpCode.value = totpCode.value.replace(/\D/g, "").slice(0, 6);
+});
+
+/* ---------- restore state (page reload / second tab) ---------- */
+async function init(){
+  loadCaptcha();   // have an image ready before the lock screen appears
+  await loadAuthInfo();
+  try{
+    const s = await api("/api/status");
+    if(s.cooldown >= 1){ /* pre-seed info card */ $("#cdInfo").textContent = "30s"; }
+    if(s.state === "queued" || s.state === "scanning"){
+      input.value = s.target || input.value;
+      if(s.profile){
+        profile = s.profile;
+        document.querySelectorAll(".profile").forEach(b =>
+          b.classList.toggle("active", b.dataset.profile === profile));
+      }
+      beginScanningUI(s.state);
+    }else if(s.state === "done" && s.result){
+      resolved = true;
+      lastResult = s.result;
+      setOutput(s.result, "");
+      copyBtn.disabled = false; dlBtn.disabled = false;
+      setState("SCAN COMPLETE", "done");
+      if(s.cooldown > 0) startCooldown(Math.ceil(s.cooldown));
+    }else if(s.cooldown > 0){
+      startCooldown(Math.ceil(s.cooldown));
+    }
+  }catch(_){ /* fresh page, or lock screen shown by api() */ }
+}
+init();
+</script>
+</body>
+</html>

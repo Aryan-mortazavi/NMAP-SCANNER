@@ -1,0 +1,6 @@
+.env
+scan_logs.txt
+__pycache__/
+*.pyc
+cloudflared.exe
+2fa-qr.png
