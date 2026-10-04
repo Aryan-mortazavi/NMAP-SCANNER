@@ -1,5 +1,7 @@
 # Nmap Scanner — Web App + Telegram Bot
 
+![Graphical abstract](docs/graphical-abstract.png)
+
 Scan IP addresses with nmap through a **dark cyber dashboard web app**, or from **Telegram**.
 Both share the same hardened scanning engine.
 
